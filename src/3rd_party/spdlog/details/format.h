@@ -2163,7 +2163,7 @@ public:
         typedef typename BasicWriter<Char>::CharPtr CharPtr;
         Char fill = internal::CharTraits<Char>::cast(spec_.fill());
         CharPtr out = CharPtr();
-        const unsigned char CHAR_WIDTH_ = 1;
+        const unsigned CHAR_WIDTH_ = 1;
         if (spec_.width_ > CHAR_WIDTH_)
         {
             out = writer_.grow_buffer(spec_.width_);

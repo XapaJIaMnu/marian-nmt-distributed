@@ -339,6 +339,12 @@ void ConfigParser::addOptionsTraining(po::options_description& desc) {
 
     ("optimizer,o", po::value<std::string>()->default_value("adam"),
      "Optimization algorithm (possible values: sgd, adagrad, adam")
+    ("beta1", po::value<double>()->default_value(0.9),
+     "Beta1 value for Adam")
+    ("beta2", po::value<double>()->default_value(0.999),
+     "Beta2 value for Adam")
+    ("eps", po::value<double>()->default_value(1e-8),
+     "Epsilon value for Adam")
     ("learn-rate,l", po::value<double>()->default_value(0.0001),
      "Learning rate")
     ("lr-decay", po::value<double>()->default_value(0.0),
@@ -358,8 +364,14 @@ void ConfigParser::addOptionsTraining(po::options_description& desc) {
       "Scales the learning rate based on the number of words in a mini-batch")
     ("batch-normal-words", po::value<double>()->default_value(1920.0),
       "This can option is only active when batch-flexible-lr is on. It determines number of words per batch that the learning rate corresponds to.")
+    ("batch-words-regain", po::value<size_t>()->default_value(1),
+     "This can option is only active when batch-flexible-lr is on. How many batches need to pass until we reach the minimum value for batch-normal-words.")
+    ("batch-max-words", po::value<double>()->default_value(7200.0),
+      "This can option is only active when batch-words-regain is set. It determines number of words per batch that the learning rate corresponds to.")
     ("tau", po::value<size_t>()->default_value(1),
      "SGD update delay, 1 = no delay")
+    ("tau-max-regain", po::value<size_t>()->default_value(1),
+     "How many batches need to pass until we reach the maximum allowed value of tau.")
 
     ("clip-norm", po::value<double>()->default_value(1.f),
      "Clip gradient norm to  arg  (0 to disable)")
@@ -631,15 +643,21 @@ void ConfigParser::parseOptions(
     SET_OPTION("optimizer", std::string);
     SET_OPTION("learn-rate", double);
     SET_OPTION("tau", size_t);
+    SET_OPTION("tau-max-regain", size_t);
     SET_OPTION("mini-batch-words", int);
     SET_OPTION("dynamic-batching", bool);
 
     SET_OPTION("lr-decay", double);
+    SET_OPTION("beta1", double);
+    SET_OPTION("beta2", double);
+    SET_OPTION("eps", double);
     SET_OPTION("lr-decay-strategy", std::string);
     SET_OPTION("lr-decay-start", std::vector<size_t>);
     SET_OPTION("lr-decay-freq", size_t);
     SET_OPTION("batch-flexible-lr", bool);
     SET_OPTION("batch-normal-words", double);
+    SET_OPTION("batch-max-words", double);
+    SET_OPTION("batch-words-regain", size_t);
 
     SET_OPTION("clip-norm", double);
     SET_OPTION("moving-average", bool);

@@ -60,6 +60,17 @@ void Adam::updateImpl(Tensor params, Tensor grads) {
  cudaStreamSynchronize(0);
 }
 
+void Adam::updateState(Ptr<OptimizerBase> localOpt, size_t shardSize_, int my_id) {
+  if(!mtAlloc_ || !vtAlloc_) {
+    return; //We don't update the optimizer unless it's initialized
+  }
+  Tensor remoteMT = localOpt->getMT_();
+  Tensor remoteVT = localOpt->getVT_();
+  int pos = shardSize_*my_id;
+  mt_->copyFrom(remoteMT->subtensor(pos, mt_->size()));
+  vt_->copyFrom(remoteVT->subtensor(pos, vt_->size()));
+}
+
 Ptr<OptimizerBase> Optimizer(Ptr<Config> options) {
   Ptr<ClipperBase> clipper = nullptr;
   float clipNorm = options->get<double>("clip-norm");
@@ -69,6 +80,32 @@ Ptr<OptimizerBase> Optimizer(Ptr<Config> options) {
   float lrate = options->get<double>("learn-rate");
 
   std::string opt = options->get<std::string>("optimizer");
+
+  float beta1 = options->get<double>("beta1");
+  float beta2 = options->get<double>("beta2");
+  float eps = options->get<double>("eps");
+
+  Ptr<OptimizerBase> ret;
+  if(opt == "sgd") {
+    ret = Optimizer<Sgd>(lrate, keywords::clip = clipper);
+  } else if(opt == "adagrad") {
+    ret = Optimizer<Adagrad>(lrate, keywords::clip = clipper);
+  } else if(opt == "adam") {
+    ret = Optimizer<Adam>(lrate, keywords::clip = clipper);
+  } else {
+    UTIL_THROW2("Unknown optimizer: " << opt);
+  }
+
+  ret->setB1(beta1);
+  ret->setB2(beta2);
+  ret->setEPS(eps);
+  return ret;
+}
+
+Ptr<OptimizerBase> Optimizer(std::string opt, double lrate, double clipNorm) {
+  Ptr<ClipperBase> clipper = nullptr;
+  if(clipNorm > 0)
+    clipper = Clipper<Norm>(clipNorm);
 
   if(opt == "sgd") {
     return Optimizer<Sgd>(lrate, keywords::clip = clipper);
@@ -80,4 +117,5 @@ Ptr<OptimizerBase> Optimizer(Ptr<Config> options) {
     UTIL_THROW2("Unknown optimizer: " << opt);
   }
 }
+
 }

@@ -42,6 +42,30 @@ public:
     eta_ = state.eta;
   }
 
+  virtual Tensor getMT_() {
+    return nullptr;
+  }
+
+  virtual Tensor getVT_() {
+    return nullptr;
+  }
+
+  virtual void updateState(Ptr<OptimizerBase> localOpt, size_t shardSize_, int my_id) {
+    return;
+  }
+
+  virtual void setB1(float newValue) {
+    return;
+  }
+
+  virtual void setB2(float newValue) {
+    return;
+  }
+
+  virtual void setEPS(float newValue) {
+    return;
+  }
+
 protected:
   virtual void updateImpl(Tensor params, Tensor grads) = 0;
 
@@ -81,12 +105,32 @@ public:
   template <typename... Args>
   Adam(float eta, Args... args)
       : OptimizerBase(eta, args...),
-        beta1_(Get(keywords::beta1, 0.9, args...)),
-        beta2_(Get(keywords::beta2, 0.999, args...)),
+        beta1_(Get(keywords::beta1, 0.91, args...)),
+        beta2_(Get(keywords::beta2, 0.998, args...)),
         eps_(Get(keywords::eps, 1e-8, args...)),
         t_(0) {}
 
   void updateImpl(Tensor params, Tensor grads);
+  void updateState(Ptr<OptimizerBase> localOpt, size_t shardSize_, int my_id);
+  Tensor getMT_() {
+    return mt_;
+  }
+
+  Tensor getVT_() {
+    return vt_;
+  }
+  
+  void setB1(float newValue) {
+    beta1_ = newValue;
+  }
+
+  void setB2(float newValue) {
+    beta2_ = newValue;
+  }
+
+  void setEPS(float newValue) {
+    eps_ = newValue;
+  }
 
 private:
   float beta1_;
@@ -106,4 +150,5 @@ Ptr<OptimizerBase> Optimizer(float eta, Args&&... args) {
 }
 
 Ptr<OptimizerBase> Optimizer(Ptr<Config> options);
+Ptr<OptimizerBase> Optimizer(std::string opt, double lrate, double clipNorm = 0);
 }
