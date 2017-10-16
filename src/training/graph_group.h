@@ -20,6 +20,7 @@
 #include "training/sparse_tensor.h"
 #include "training/training.h"
 #include "training/validator.h"
+#include "training/scaler.h"
 
 namespace marian {
 
