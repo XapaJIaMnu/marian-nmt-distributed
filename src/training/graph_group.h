@@ -1497,6 +1497,7 @@ private:
       thread_local Tensor accGradients;
       thread_local Ptr<TensorAllocator> accAlloc;
       thread_local float average_batch_words_loc;
+      thread_local Ptr<OptimizerBase> localOpt = Optimizer(options_);
 
       thread_local size_t my_id = 0;
 
@@ -1530,6 +1531,12 @@ private:
         Element(_1 += _2, accGradients, graph->params()->grads());
         gradients = accGradients;
         numSeenWords += batchWords; // Keep track of how many words we've calculated the error from
+
+        //Local optimizer step
+        if (t < 3000){
+          localOpt->update(graph, batchWords/average_batch_words_loc);
+        }
+        gpuShardsParams_[my_id]->copyFrom(graph->params()->vals()->subtensor(my_id*gpuShardSizes_[0], gpuShardSizes_[my_id]));
       }
       else {
         gradients = graph->params()->grads();

@@ -42,6 +42,14 @@ public:
     eta_ = state.eta;
   }
 
+  virtual void setB1(float newValue) {
+    return;
+  }
+
+  virtual void setB2(float newValue) {
+    return;
+  }
+
 protected:
   virtual void updateImpl(Tensor params, Tensor grads) = 0;
 
@@ -87,6 +95,14 @@ public:
         t_(0) {}
 
   void updateImpl(Tensor params, Tensor grads);
+
+  void setB1(float newValue) {
+    beta1_ = newValue;
+  }
+
+  void setB2(float newValue) {
+    beta2_ = newValue;
+  }
 
 private:
   float beta1_;
