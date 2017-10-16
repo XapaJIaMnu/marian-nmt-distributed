@@ -1186,7 +1186,7 @@ private:
    * @param batchWords Number of batch words to pass to server shard optimizers
    * @param optionalBlockMutex Optional mutex that has to be locked during synchronization
    */
-  void synchronizeWithServerShards(Tensor newGrads, Tensor oldParams, int gpu, size_t batchWords = 0, std::mutex * optionalBlockMutex = nullptr) {
+  void synchronizeWithServerShards(Tensor newGrads, Tensor oldParams, int gpu, size_t batchWords = 0, float average_batch_words_loc = 1920, std::mutex * optionalBlockMutex = nullptr) {
     #if MPI_FOUND
     size_t offset = 0;
     for (int node = 0; node < mpi_comm_world_size_; node++) {
@@ -1228,7 +1228,7 @@ private:
             gpuShardsGrads_[gpu]->copyFrom(newGrads->subtensor(offset, size));
             // Run optimizer on GPU
             if (scale_lr && batchWords > 0) {
-              gpuShardsOpts_[gpu]->update(gpuShardsParams_[gpu], gpuShardsGrads_[gpu], batchWords / average_batch_words);
+              gpuShardsOpts_[gpu]->update(gpuShardsParams_[gpu], gpuShardsGrads_[gpu], batchWords / average_batch_words_loc);
             } else {
               gpuShardsOpts_[gpu]->update(gpuShardsParams_[gpu], gpuShardsGrads_[gpu]);
             }
@@ -1417,7 +1417,7 @@ private:
           if (dropRate_) {
             sparseSynchronizeWithServerShards(commBufferGrads_[gpu], commBufferParams_[gpu], gpu, scale_lr ? gpuCommittedWordCounts_[gpu] : 0, commOverlapSingleActive_ ? &mutexCommChannel_ : nullptr);
           } else {
-            synchronizeWithServerShards(commBufferGrads_[gpu], commBufferParams_[gpu], gpu, scale_lr ? gpuCommittedWordCounts_[gpu] : 0, commOverlapSingleActive_ ? &mutexCommChannel_ : nullptr);
+            synchronizeWithServerShards(commBufferGrads_[gpu], commBufferParams_[gpu], gpu, scale_lr ? gpuCommittedWordCounts_[gpu] : 0, average_batch_words, commOverlapSingleActive_ ? &mutexCommChannel_ : nullptr);
           }
 
           // Indicate that buffers can be read from and filled again
@@ -1492,9 +1492,11 @@ private:
       thread_local Ptr<Builder> builder;
       thread_local size_t t = 0;
       thread_local size_t numSeenWords = 0;
+      thread_local Scaler scaler(options_);
 
       thread_local Tensor accGradients;
       thread_local Ptr<TensorAllocator> accAlloc;
+      thread_local float average_batch_words_loc;
 
       thread_local size_t my_id = 0;
 
@@ -1505,6 +1507,8 @@ private:
         builder = builders_[i++];
       }
 
+      average_batch_words_loc = scaler.getNewBatchLR();
+      average_batch_words = average_batch_words_loc;
       auto costNode = builder->build(graph, batch);
 
       graph->forward();
@@ -1540,7 +1544,7 @@ private:
         if (dropRate_ && t) {
           sparseSynchronizeWithServerShards(gradients, graph->params()->vals(), my_id, numSeenWords);
         } else {
-          synchronizeWithServerShards(gradients, graph->params()->vals(), my_id, numSeenWords);
+          synchronizeWithServerShards(gradients, graph->params()->vals(), my_id, numSeenWords, average_batch_words_loc);
         }
         numSeenWords = 0;
 
