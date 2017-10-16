@@ -89,8 +89,8 @@ public:
   template <typename... Args>
   Adam(float eta, Args... args)
       : OptimizerBase(eta, args...),
-        beta1_(Get(keywords::beta1, 0.9, args...)),
-        beta2_(Get(keywords::beta2, 0.999, args...)),
+        beta1_(Get(keywords::beta1, 0.91, args...)),
+        beta2_(Get(keywords::beta2, 0.998, args...)),
         eps_(Get(keywords::eps, 1e-8, args...)),
         t_(0) {}
 

@@ -1508,6 +1508,11 @@ private:
         builder = builders_[i++];
       }
 
+      if (t==0) {
+        localOpt->setB1(0.93f);
+        localOpt->setB1(0.997f);
+      }
+
       average_batch_words_loc = scaler.getNewBatchLR();
       average_batch_words = average_batch_words_loc;
       auto costNode = builder->build(graph, batch);
@@ -1543,7 +1548,13 @@ private:
         numSeenWords = batchWords;
       }
 
+      if (t == 4000) {
+        gpuShardsOpts_[my_id]->setB1(0.92);
+        gpuShardsOpts_[my_id]->setB2(0.998);
+      }
+
       t++;
+      scaler.newBatch();
 
       cudaStreamSynchronize(0);
 
